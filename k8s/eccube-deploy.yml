@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eccube
+spec:
+  selector:
+    matchLabels:
+      app: eccube
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: eccube
+    spec:
+      initContainers:
+        - name: eccube-init
+          image: local/eccube-maintenance:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: eccube-config
+          volumeMounts:
+            - name: htdocs-volume
+              mountPath: /var/www/html
+            - name: persistent-volume
+              mountPath: /opt/ec-cube
+          command: ["/eccube_install.sh"]
+      containers:
+        - name: eccube
+          image: eccube/php-ext-apache:7.3
+          volumeMounts:
+            - name: htdocs-volume
+              mountPath: /var/www/html
+            - name: persistent-volume
+              mountPath: /opt/ec-cube
+      volumes:
+        - name: htdocs-volume
+          emptyDir: {}
+        - name: persistent-volume
+          persistentVolumeClaim:
+            claimName: eccube-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eccube
+spec:
+  type: NodePort
+  selector:
+    app: eccube
+  ports:
+    - port: 80
+      targetPort: 80

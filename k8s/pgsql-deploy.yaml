@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: eccube-pgsql
+  labels:
+    app: eccube-pgsql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eccube-pgsql
+  serviceName: eccube-pgsql
+  template:
+    metadata:
+      labels:
+        app: eccube-pgsql
+    spec:
+      containers:
+        - image: postgres:10-alpine
+          name: eccube-pgsql
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: password
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eccube-pgsql
+spec:
+  type: NodePort
+  selector:
+    app: eccube-pgsql
+  ports:
+    - port: 5432
+      targetPort: 5432
